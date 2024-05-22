@@ -1,64 +1,41 @@
 #!/usr/bin/env python3
-""" LFU Caching module
-"""
+""" LFU caching """
+
 from base_caching import BaseCaching
+from collections import defaultdict
 
 
 class LFUCache(BaseCaching):
-    """ LFUCache defines:
-      - caching system with LFU eviction policy
-    """
+    """ LFUCache defines a caching system with an LFU algorithm """
 
     def __init__(self):
-        """ Initialize
-        """
+        """ Initialize """
         super().__init__()
-        self.frequency = {}
-        self.lru = {}
+        self.lfu_count = defaultdict(int)
+        self.lfu_order = []
 
     def put(self, key, item):
-        """ Add an item in the cache
-        """
-        if key is None or item is None:
-            return
-
-        if key in self.cache_data:
+        """ Add an item in the cache """
+        if key is not None and item is not None:
+            if key in self.cache_data:
+                self.lfu_order.remove(key)
             self.cache_data[key] = item
-            self.frequency[key] += 1
-            self.lru[key] = self.lru_counter
-            self.lru_counter += 1
-        else:
-            if len(self.cache_data) >= BaseCaching.MAX_ITEMS:
-                min_freq = min(self.frequency.values())
-                min_keys = [k for k, v in self.frequency.items()(
-                    if v == min_freq]
+            self.lfu_count[key] += 1
+            self.lfu_order.append(key)
+            if len(self.cache_data) > BaseCaching.MAX_ITEMS:
+                lfu_key = min(self.lfu_order, key=lambda k: (
+                    (self.lfu_count[k], self.lfu_order.index(k)))
                     )
-                lru_key = min(min_keys, key=lambda k: self.lru[k])
-                print(f"DISCARD: {lru_key}")
-                del self.cache_data[lru_key]
-                del self.frequency[lru_key]
-                del self.lru[lru_key]
-
-            self.cache_data[key] = item
-            self.frequency[key] = 1
-            self.lru[key] = self.lru_counter
-            self.lru_counter += 1
+                del self.cache_data[lfu_key]
+                del self.lfu_count[lfu_key]
+                self.lfu_order.remove(lfu_key)
+                print("DISCARD: {}".format(lfu_key))
 
     def get(self, key):
-        """ Get an item by key
-        """
-        if key is None or key not in self.cache_data:
-            return None
-
-        self.frequency[key] += 1
-        self.lru[key] = self.lru_counter
-        self.lru_counter += 1
-        return self.cache_data[key]
-
-    def __init__(self):
-        """ Initialize
-        """
-        super().__init__()
-        self.frequency = {}
-        self.lru = {}
-        self.lru_counter = 0
+        """ Get an item by key """
+        if key in self.cache_data:
+            self.lfu_count[key] += 1
+            self.lfu_order.remove(key)
+            self.lfu_order.append(key)
+            return self.cache_data.get(key)
+        return None
